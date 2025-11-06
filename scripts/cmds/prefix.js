@@ -36,7 +36,7 @@ module.exports = {
 			successThisThread: "✅ Group prefix successfully changed to: 『 %1 』",
 			myPrefix: `
 ╭───[ 🌸 𝒫𝓇𝑒𝒻𝒾𝓍 𝒾𝓃𝒻𝑜 ]───╮
-│ ✨ 𝐵𝑜𝓉 𝒩𝒶𝓂𝑒: ex
+│ ✨ 𝐵𝑜𝓉 𝒩𝒶𝓂𝑒: kipe Jerry 
 │ 🌐 𝒮𝓎𝓈𝓉𝑒𝓂 𝒫𝓇𝑒𝒻𝒾𝓍: %1
 │ 💬 𝒞𝒽𝒶𝓉 𝒫𝓇𝑒𝒻𝒾𝓍: %2
 │ 🧚‍♀️ 𝒟𝑒𝓋: ncs pro
