@@ -1,50 +1,65 @@
-edit.js const axios = require("axios");
-const fs = require("fs-extra");
+const axios = require("axios");
+const fs = require("fs");
 const path = require("path");
 
 module.exports = {
-config: {
-name: "edit",
-version: "1.0",
-author: "Rifat | nxo_here",
-countDown: 5,
-role: 0,
-shortDescription: { en: "Edit image using prompt" },
-longDescription: { en: "Edit an uploaded image based on your prompt." },
-category: "ai",
-guide: { en: "{p}edit [prompt] (reply to image)" }
-},
+    config: {
+        name: "edit",
+        aliases: [],
+        version: "1.1",
+        author: "Romeo",
+        countDown: 30,
+        role: 0,
+        shortDescription: "Edit or generate an image using Gemini-Edit",
+        category: "𝗔𝗜",
+        guide: {
+            en: "{pn} <text> (reply to image optional)",
+        },
+    },
+    onStart: async function ({ message, event, args, api }) {
+        const prompt = args.join(" ");
+        if (!prompt) return message.reply("Please provide the text to edit or generate.");
 
-onStart: async function ({ api, event, args, message }) {
-const prompt = args.join(" ");
-const repliedImage = event.messageReply?.attachments?.[0];
+        const apiurl = "https://gemini-edit-omega.vercel.app/edit";
+        api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
-if (!prompt || !repliedImage || repliedImage.type !== "photo") {
-return message.reply("⚠️ | Please reply to a photo with your prompt to edit it.");
-}
+        try {
+            
+            let params = { prompt };
+            if (event.messageReply && event.messageReply.attachments && event.messageReply.attachments[0]) {
+                params.imgurl = event.messageReply.attachments[0].url;
+            }
 
-const imgPath = path.join(__dirname, "cache", `${Date.now()}_edit.jpg`);
-const waitMsg = await message.reply(`🧪 Editing image for: "${prompt}"...\nPlease wait...`); 2 
+            
+            const res = await axios.get(apiurl, { params });
 
-try {
-const imgURL = repliedImage.url;
-const imageUrl = `https://edit-and-gen.onrender.com/gen?prompt=${encodeURIComponent(prompt)}&image=${encodeURIComponent(imgURL)}`;
-const res = await axios.get(imageUrl, { responseType: "arraybuffer" });
+            if (!res.data || !res.data.images || !res.data.images[0]) {
+                api.setMessageReaction("❌", event.messageID, () => {}, true);
+                return message.reply("❌ Failed to get image.");
+            }
 
-await fs.ensureDir(path.dirname(imgPath));
-await fs.writeFile(imgPath, Buffer.from(res.data, "binary"));
+           
+            const base64Image = res.data.images[0].replace(/^data:image\/\w+;base64,/, "");
+            const imageBuffer = Buffer.from(base64Image, "base64");
 
-await message.reply({
-body: `✅ | Edited image for: "${prompt}"`,
-attachment: fs.createReadStream(imgPath)
-});
+         
+            const cacheDir = path.join(__dirname, "cache");
+            if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-} catch (err) {
-console.error("EDIT Error:", err);
-message.reply("❌ | Failed to edit image. Please try again later.");
-} finally {
-await fs.remove(imgPath);
-api.unsendMessage(waitMsg.messageID);
-}
-}
+            const imagePath = path.join(cacheDir, `${Date.now()}.png`);
+            fs.writeFileSync(imagePath, imageBuffer);
+
+            api.setMessageReaction("✅", event.messageID, () => {}, true);
+
+            await message.reply({ attachment: fs.createReadStream(imagePath) }, event.threadID, () => {
+                fs.unlinkSync(imagePath);
+                message.unsend(message.messageID);
+            }, event.messageID);
+
+        } catch (error) {
+            console.error("❌ API ERROR:", error.response?.data || error.message);
+            api.setMessageReaction("❌", event.messageID, () => {}, true);
+            return message.reply("Error generating/editing image.");
+        }
+    }
 };
